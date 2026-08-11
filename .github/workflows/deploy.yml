@@ -1,0 +1,110 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: copa-resenha-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required configuration
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+        run: |
+          for name in SERVER_USER SSH_PRIVATE_KEY POSTGRES_PASSWORD AUTH_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret $name is required"
+              exit 1
+            fi
+          done
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 46.225.12.24 >> ~/.ssh/known_hosts
+
+      - name: Package application
+        run: |
+          tar \
+            --exclude=.git \
+            --exclude=.next \
+            --exclude=node_modules \
+            --exclude=.env \
+            --exclude=uploads \
+            -czf /tmp/copa-resenha-${GITHUB_SHA}.tar.gz .
+
+      - name: Upload release
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          scp /tmp/copa-resenha-${GITHUB_SHA}.tar.gz \
+            "${SERVER_USER}@46.225.12.24:/tmp/copa-resenha-${GITHUB_SHA}.tar.gz"
+
+      - name: Deploy isolated stack
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          APP_PORT: ${{ vars.APP_PORT || '3011' }}
+          APP_BIND_ADDRESS: ${{ vars.APP_BIND_ADDRESS || '127.0.0.1' }}
+        run: |
+          ENV_FILE=$(mktemp)
+          {
+            printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD"
+            printf 'AUTH_SECRET=%s\n' "$AUTH_SECRET"
+            printf 'APP_PORT=%s\n' "$APP_PORT"
+            printf 'APP_BIND_ADDRESS=%s\n' "$APP_BIND_ADDRESS"
+            printf 'MAX_UPLOAD_MB=10\n'
+          } > "$ENV_FILE"
+          scp "$ENV_FILE" "${SERVER_USER}@46.225.12.24:/tmp/copa-resenha.env"
+          ssh "${SERVER_USER}@46.225.12.24" \
+            "RELEASE_SHA='${GITHUB_SHA}' APP_PORT='${APP_PORT}' bash -s" <<'REMOTE'
+            set -euo pipefail
+            DEPLOY_DIR="$HOME/apps/copa_resenha"
+            ARCHIVE="/tmp/copa-resenha-${RELEASE_SHA}.tar.gz"
+            occupied=$(docker ps --filter "publish=${APP_PORT}" --format '{{.Names}}' | grep -v '^copa-resenha-app-1$' || true)
+            if [ -n "$occupied" ]; then
+              echo "Porta ${APP_PORT} já pertence a: ${occupied}. Deploy cancelado sem alterar os projetos."
+              exit 1
+            fi
+            mkdir -p "$DEPLOY_DIR"
+            tar -xzf "$ARCHIVE" -C "$DEPLOY_DIR"
+            install -m 600 /tmp/copa-resenha.env "$DEPLOY_DIR/.env.production"
+            cd "$DEPLOY_DIR"
+            COMPOSE="docker compose --project-name copa-resenha --env-file .env.production -f docker-compose.production.yml"
+            $COMPOSE build --pull app migrate
+            $COMPOSE up -d postgres
+            $COMPOSE run --rm migrate
+            $COMPOSE up -d --remove-orphans app
+            $COMPOSE ps
+            rm -f "$ARCHIVE" /tmp/copa-resenha.env
+          REMOTE
+
+      - name: Verify deployment
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          APP_PORT: ${{ vars.APP_PORT || '3011' }}
+        run: |
+          ssh "${SERVER_USER}@46.225.12.24" \
+            "curl --fail --silent --show-error --retry 12 --retry-delay 5 http://127.0.0.1:${APP_PORT}/ > /dev/null"
