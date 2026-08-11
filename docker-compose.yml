@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: copa
+      POSTGRES_PASSWORD: copa
+      POSTGRES_DB: copa_resenha
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U copa -d copa_resenha"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  app:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: postgresql://copa:copa@postgres:5432/copa_resenha?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:-desenvolvimento-chave-local-32-caracteres}
+      UPLOAD_DIR: /app/uploads
+    volumes: [uploads:/app/uploads]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  uploads:

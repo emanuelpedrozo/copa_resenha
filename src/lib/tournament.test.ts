@@ -1,0 +1,5 @@
+import {describe,expect,it} from 'vitest';
+import {knockoutPairs,roundRobin,standings} from './tournament';
+describe('round robin',()=>{it('gera ida sem repetição',()=>{const games=roundRobin(['a','b','c','d']);expect(games).toHaveLength(6);expect(new Set(games.map(g=>[g.home,g.away].sort().join()))).toHaveLength(6)});it('inverte mandos na volta',()=>{const games=roundRobin(['a','b','c','d'],true);expect(games).toHaveLength(12);expect(games.slice(6).every((g,i)=>g.home===games[i].away&&g.away===games[i].home)).toBe(true)});it('lida com número ímpar',()=>expect(roundRobin(['a','b','c'])).toHaveLength(3))});
+describe('classificação',()=>{it('calcula e ordena pontos, vitórias e saldo',()=>{const table=standings(['a','b','c'],[{homeId:'a',awayId:'b',homeScore:2,awayScore:0},{homeId:'c',awayId:'a',homeScore:1,awayScore:1}]);expect(table[0]).toMatchObject({id:'a',points:4,wins:1,draws:1,goalDifference:2});expect(table[2].id).toBe('b')})});
+describe('mata-mata',()=>it('adiciona BYE até potência de dois',()=>{const pairs=knockoutPairs(['a','b','c'],()=>.5);expect(pairs).toHaveLength(2);expect(pairs.flat().filter(Boolean)).toHaveLength(3)}));

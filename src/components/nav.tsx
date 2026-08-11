@@ -1,0 +1,3 @@
+import {Home,Gamepad2,Trophy,Users,UserRound} from 'lucide-react';
+const items=[[Home,'Início'],[Gamepad2,'Jogos'],[Trophy,'Tabela'],[Users,'Jogadores'],[UserRound,'Perfil']] as const;
+export function BottomNav(){return <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-xl justify-around border-t border-white/10 bg-[#0b1115]/95 px-2 pb-[max(10px,env(safe-area-inset-bottom))] pt-3 backdrop-blur">{items.map(([Icon,label],i)=><button key={label} className={`flex min-w-14 flex-col items-center gap-1 text-[10px] font-bold ${i===0?'text-pitch':'text-muted'}`}><Icon size={20}/>{label}</button>)}</nav>}
