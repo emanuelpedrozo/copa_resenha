@@ -95,8 +95,8 @@ jobs:
             COMPOSE="docker compose --project-name copa-resenha --env-file .env.production -f docker-compose.production.yml"
             $COMPOSE build --pull app migrate
             $COMPOSE up -d postgres
-            # Sem T, o processo remoto consome o restante do heredoc via stdin.
-            $COMPOSE run --rm -T migrate
+            # O stdin precisa ser fechado para não consumir o restante do heredoc SSH.
+            $COMPOSE run --rm -T migrate < /dev/null
             $COMPOSE up -d --remove-orphans app
             $COMPOSE ps
             rm -f "$ARCHIVE" /tmp/copa-resenha.env
