@@ -37,6 +37,21 @@ services:
         condition: service_healthy
     profiles: ["tools"]
 
+  seed:
+    build:
+      context: .
+      target: builder
+    command: npx tsx prisma/seed.ts
+    environment:
+      <<: *app-environment
+      SEED_PASSWORD: ${SEED_PASSWORD:-Resenha@2026}
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
+
   app:
     build:
       context: .

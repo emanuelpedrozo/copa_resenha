@@ -1,0 +1,6 @@
+import {prisma} from './prisma';
+import {standings} from './tournament';
+export async function activeChampionship(){return prisma.championship.findFirst({where:{status:'ACTIVE'},orderBy:{createdAt:'desc'},include:{participants:{include:{user:true}},rounds:{orderBy:{roundNumber:'asc'}},matches:{include:{homePlayer:true,awayPlayer:true,round:true,evidences:true,disputes:true},orderBy:{createdAt:'asc'}}}})}
+export function championshipTable(championship:NonNullable<Awaited<ReturnType<typeof activeChampionship>>>){const confirmed=championship.matches.filter(m=>m.status==='CONFIRMED'&&m.homeScore!==null&&m.awayScore!==null);const table=standings(championship.participants.map(p=>p.userId),confirmed.map(m=>({homeId:m.homePlayerId,awayId:m.awayPlayerId,homeScore:m.homeScore!,awayScore:m.awayScore!})));const users=new Map(championship.participants.map(p=>[p.userId,p.user]));return table.map((row,index)=>({...row,position:index+1,user:users.get(row.id)!}))}
+export const formatLabel={LEAGUE:'Pontos corridos',KNOCKOUT:'Mata-mata',SINGLE:'Jogo único',HOME_AWAY:'Ida e volta'} as Record<string,string>;
+export const statusLabel={PENDING:'Aguardando resultado',WAITING_CONFIRMATION:'Aguardando confirmação',CONFIRMED:'Confirmado',DISPUTED:'Contestado',CANCELLED:'Cancelado'} as Record<string,string>;

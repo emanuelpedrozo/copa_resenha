@@ -93,10 +93,11 @@ jobs:
             install -m 600 /tmp/copa-resenha.env "$DEPLOY_DIR/.env.production"
             cd "$DEPLOY_DIR"
             COMPOSE="docker compose --project-name copa-resenha --env-file .env.production -f docker-compose.production.yml"
-            $COMPOSE build --pull app migrate
+            $COMPOSE build --pull app migrate seed
             $COMPOSE up -d postgres
             # O stdin precisa ser fechado para não consumir o restante do heredoc SSH.
             $COMPOSE run --rm -T migrate < /dev/null
+            $COMPOSE run --rm -T seed < /dev/null
             $COMPOSE up -d --remove-orphans app
             $COMPOSE ps
             rm -f "$ARCHIVE" /tmp/copa-resenha.env
