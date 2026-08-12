@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createUser } from "@/app/actions";
 import { PageTitle, TeamCrest } from "@/components/ui";
-import { teams } from "@/lib/teams";
+import Link from "next/link";
 export default async function UsersAdmin({
   searchParams,
 }: {
@@ -10,9 +10,21 @@ export default async function UsersAdmin({
 }) {
   await requireAdmin();
   const users = await prisma.user.findMany({ orderBy: { name: "asc" } });
+  const teams = await prisma.team.findMany({ orderBy: { name: "asc" } });
   return (
     <>
-      <PageTitle title="Usuários" subtitle={`${users.length} cadastrados`} />
+      <PageTitle
+        title="Usuários"
+        subtitle={`${users.length} cadastrados`}
+        action={
+          <Link
+            href="/admin/times"
+            className="rounded-xl border border-pitch/40 px-4 py-2 text-xs font-bold text-pitch"
+          >
+            GERENCIAR TIMES
+          </Link>
+        }
+      />
       {searchParams.ok && (
         <p className="mb-4 rounded-xl bg-pitch/10 p-3 text-pitch">
           Usuário criado.
@@ -38,9 +50,9 @@ export default async function UsersAdmin({
             <option value="" disabled>
               Selecione o time
             </option>
-            {teams.map(([name]) => (
-              <option key={name} value={name}>
-                {name}
+            {teams.map((team) => (
+              <option key={team.id} value={team.name}>
+                {team.name}
               </option>
             ))}
           </select>

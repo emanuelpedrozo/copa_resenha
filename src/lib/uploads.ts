@@ -33,7 +33,7 @@ const types: Record<
 const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
 const maxBytes = Number(process.env.MAX_UPLOAD_MB || 10) * 1024 * 1024;
 
-export async function saveEvidence(file: File) {
+async function saveImage(file: File, prefix: string) {
   if (!types[file.type]) throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
   if (file.size === 0 || file.size > maxBytes)
     throw new Error(
@@ -44,12 +44,14 @@ export async function saveEvidence(file: File) {
   if (!type.signature(data))
     throw new Error("O arquivo enviado não é uma imagem válida.");
   await mkdir(uploadDir, { recursive: true });
-  const name = `${randomUUID()}.${type.extension}`;
+  const name = `${prefix}-${randomUUID()}.${type.extension}`;
   await writeFile(path.join(uploadDir, name), data, { flag: "wx" });
   return name;
 }
+export const saveEvidence = (file: File) => saveImage(file, "evidence");
+export const saveTeamCrest = (file: File) => saveImage(file, "team");
 export async function loadEvidence(name: string) {
-  if (!/^[a-f0-9-]+\.(jpg|png|webp)$/.test(name)) return null;
+  if (!/^(?:[a-z]+-)?[a-f0-9-]+\.(jpg|png|webp)$/.test(name)) return null;
   try {
     return await readFile(path.join(uploadDir, name));
   } catch {

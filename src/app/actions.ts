@@ -11,8 +11,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { knockoutPairs, roundRobin } from "@/lib/tournament";
-import { saveEvidence } from "@/lib/uploads";
-import { teamCrestUrl, teams } from "@/lib/teams";
+import { saveEvidence, saveTeamCrest } from "@/lib/uploads";
 
 export async function logout() {
   cookies().set("copa_session", "", { httpOnly: true, path: "/", maxAge: 0 });
@@ -160,12 +159,14 @@ export async function updateProfile(form: FormData) {
     .object({
       name: z.string().trim().min(2).max(100),
       nickname: z.string().trim().min(2).max(30),
-      teamName: z.enum(teams.map(([name]) => name) as [string, ...string[]]),
+      teamName: z.string().trim().min(2),
     })
     .parse(Object.fromEntries(form));
+  const team = await prisma.team.findUnique({ where: { name: data.teamName } });
+  if (!team) throw new Error("Time não encontrado.");
   await prisma.user.update({
     where: { id: user.id },
-    data: { ...data, teamCrestUrl: teamCrestUrl(data.teamName) },
+    data: { ...data, teamCrestUrl: team.crestUrl },
   });
   revalidatePath("/perfil");
   revalidatePath("/dashboard");
@@ -276,18 +277,39 @@ export async function createUser(form: FormData) {
         .regex(/^[a-z0-9._-]+$/),
       email: z.string().email().toLowerCase(),
       password: z.string().min(8),
-      teamName: z.enum(teams.map(([name]) => name) as [string, ...string[]]),
+      teamName: z.string().trim().min(2),
     })
     .parse(Object.fromEntries(form));
   const { password, ...profile } = data;
+  const team = await prisma.team.findUnique({ where: { name: data.teamName } });
+  if (!team) throw new Error("Time não encontrado.");
   await prisma.user.create({
     data: {
       ...profile,
-      teamCrestUrl: teamCrestUrl(data.teamName),
+      teamCrestUrl: team.crestUrl,
       passwordHash: await hashPassword(password),
     },
   });
   redirect("/admin/usuarios?ok=criado");
+}
+
+export async function createTeam(form: FormData) {
+  const admin = await currentUser();
+  if (!admin || admin.role !== "ADMIN") throw new Error("Acesso negado.");
+  const name = z.string().trim().min(2).max(80).parse(form.get("name"));
+  if (await prisma.team.findUnique({ where: { name } }))
+    throw new Error("Já existe um time com esse nome.");
+  const crest = form.get("crest");
+  if (!(crest instanceof File) || crest.size === 0)
+    throw new Error("O arquivo do escudo é obrigatório.");
+  const fileName = await saveTeamCrest(crest);
+  await prisma.team.create({
+    data: { name, crestUrl: `/api/team-crests/${fileName}` },
+  });
+  revalidatePath("/admin/times");
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/perfil");
+  redirect("/admin/times?ok=criado");
 }
 
 export async function createChampionship(form: FormData) {

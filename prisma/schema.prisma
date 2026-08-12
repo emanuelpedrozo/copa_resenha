@@ -1,37 +1,44 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
   ADMIN
   PARTICIPANT
 }
+
 enum CompetitionFormat {
   LEAGUE
   KNOCKOUT
 }
+
 enum MatchFormat {
   SINGLE
   HOME_AWAY
 }
+
 enum DrawType {
   RANDOM
   MANUAL
 }
+
 enum Tiebreaker {
   PENALTIES
   EXTRA_TIME_PENALTIES
   ADMIN_DECISION
 }
+
 enum ChampionshipStatus {
   DRAFT
   ACTIVE
   FINISHED
 }
+
 enum MatchStatus {
   PENDING
   WAITING_CONFIRMATION
@@ -39,6 +46,7 @@ enum MatchStatus {
   DISPUTED
   CANCELLED
 }
+
 enum Phase {
   LEAGUE
   ROUND_OF_32
@@ -47,11 +55,13 @@ enum Phase {
   SEMI_FINAL
   FINAL
 }
+
 enum TieStatus {
   PENDING
   ACTIVE
   COMPLETED
 }
+
 enum DisputeStatus {
   OPEN
   RESOLVED
@@ -59,166 +69,189 @@ enum DisputeStatus {
 }
 
 model User {
-  id String @id @default(cuid())
-  name String
-  nickname String
-  username String @unique
-  email String @unique
-  passwordHash String @map("password_hash")
-  avatarUrl String? @map("avatar_url")
-  teamName String? @map("team_name")
-  teamCrestUrl String? @map("team_crest_url")
-  role Role @default(PARTICIPANT)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             String                    @id @default(cuid())
+  name           String
+  nickname       String
+  username       String                    @unique
+  email          String                    @unique
+  passwordHash   String                    @map("password_hash")
+  avatarUrl      String?                   @map("avatar_url")
+  teamName       String?                   @map("team_name")
+  teamCrestUrl   String?                   @map("team_crest_url")
+  role           Role                      @default(PARTICIPANT)
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  updatedAt      DateTime                  @updatedAt @map("updated_at")
   participations ChampionshipParticipant[]
-  homeMatches Match[] @relation("home")
-  awayMatches Match[] @relation("away")
-  submissions Match[] @relation("submitted")
-  confirmations Match[] @relation("confirmed")
-  evidences MatchEvidence[]
-  notifications Notification[]
-  auditLogs AuditLog[]
+  homeMatches    Match[]                   @relation("home")
+  awayMatches    Match[]                   @relation("away")
+  submissions    Match[]                   @relation("submitted")
+  confirmations  Match[]                   @relation("confirmed")
+  evidences      MatchEvidence[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+
   @@map("users")
 }
 
-model Championship {
-  id String @id @default(cuid())
-  name String
-  description String?
-  competitionFormat CompetitionFormat @map("competition_format")
-  matchFormat MatchFormat @map("match_format")
-  knockoutDrawType DrawType? @map("knockout_draw_type")
-  knockoutTiebreaker Tiebreaker? @map("knockout_tiebreaker")
-  requireEvidence Boolean @default(true) @map("require_evidence")
-  status ChampionshipStatus @default(DRAFT)
-  startDate DateTime? @map("start_date")
-  championId String? @map("champion_id")
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  crestUrl  String   @map("crest_url")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  participants ChampionshipParticipant[]
-  rounds Round[]
-  matches Match[]
-  ties KnockoutTie[]
+
+  @@map("teams")
+}
+
+model Championship {
+  id                 String                    @id @default(cuid())
+  name               String
+  description        String?
+  competitionFormat  CompetitionFormat         @map("competition_format")
+  matchFormat        MatchFormat               @map("match_format")
+  knockoutDrawType   DrawType?                 @map("knockout_draw_type")
+  knockoutTiebreaker Tiebreaker?               @map("knockout_tiebreaker")
+  requireEvidence    Boolean                   @default(true) @map("require_evidence")
+  status             ChampionshipStatus        @default(DRAFT)
+  startDate          DateTime?                 @map("start_date")
+  championId         String?                   @map("champion_id")
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  updatedAt          DateTime                  @updatedAt @map("updated_at")
+  participants       ChampionshipParticipant[]
+  rounds             Round[]
+  matches            Match[]
+  ties               KnockoutTie[]
+
   @@map("championships")
 }
 
 model ChampionshipParticipant {
-  id String @id @default(cuid())
-  championshipId String @map("championship_id")
-  userId String @map("user_id")
-  seed Int?
-  createdAt DateTime @default(now()) @map("created_at")
-  championship Championship @relation(fields:[championshipId], references:[id], onDelete:Cascade)
-  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
-  @@unique([championshipId,userId])
+  id             String       @id @default(cuid())
+  championshipId String       @map("championship_id")
+  userId         String       @map("user_id")
+  seed           Int?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([championshipId, userId])
   @@map("championship_participants")
 }
 
 model Round {
-  id String @id @default(cuid())
-  championshipId String @map("championship_id")
-  roundNumber Int @map("round_number")
-  name String
-  phase Phase
-  createdAt DateTime @default(now()) @map("created_at")
-  championship Championship @relation(fields:[championshipId], references:[id], onDelete:Cascade)
-  matches Match[]
+  id             String       @id @default(cuid())
+  championshipId String       @map("championship_id")
+  roundNumber    Int          @map("round_number")
+  name           String
+  phase          Phase
+  createdAt      DateTime     @default(now()) @map("created_at")
+  championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  matches        Match[]
+
   @@map("rounds")
 }
 
 model KnockoutTie {
-  id String @id @default(cuid())
-  championshipId String @map("championship_id")
-  phase Phase
-  player1Id String? @map("player1_id")
-  player2Id String? @map("player2_id")
-  winnerId String? @map("winner_id")
-  aggregatePlayer1 Int @default(0) @map("aggregate_player1")
-  aggregatePlayer2 Int @default(0) @map("aggregate_player2")
-  status TieStatus @default(PENDING)
-  nextTieId String? @map("next_tie_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  championship Championship @relation(fields:[championshipId], references:[id], onDelete:Cascade)
-  matches Match[]
+  id               String       @id @default(cuid())
+  championshipId   String       @map("championship_id")
+  phase            Phase
+  player1Id        String?      @map("player1_id")
+  player2Id        String?      @map("player2_id")
+  winnerId         String?      @map("winner_id")
+  aggregatePlayer1 Int          @default(0) @map("aggregate_player1")
+  aggregatePlayer2 Int          @default(0) @map("aggregate_player2")
+  status           TieStatus    @default(PENDING)
+  nextTieId        String?      @map("next_tie_id")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+  championship     Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  matches          Match[]
+
   @@map("knockout_ties")
 }
 
 model Match {
-  id String @id @default(cuid())
-  championshipId String @map("championship_id")
-  roundId String? @map("round_id")
-  knockoutTieId String? @map("knockout_tie_id")
-  homePlayerId String @map("home_player_id")
-  awayPlayerId String @map("away_player_id")
-  homeScore Int? @map("home_score")
-  awayScore Int? @map("away_score")
-  homePenalties Int? @map("home_penalties")
-  awayPenalties Int? @map("away_penalties")
-  winnerId String? @map("winner_id")
-  status MatchStatus @default(PENDING)
-  playedAt DateTime? @map("played_at")
-  submittedById String? @map("submitted_by")
-  confirmedById String? @map("confirmed_by")
-  submittedAt DateTime? @map("submitted_at")
-  confirmedAt DateTime? @map("confirmed_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  championship Championship @relation(fields:[championshipId], references:[id], onDelete:Cascade)
-  round Round? @relation(fields:[roundId], references:[id])
-  tie KnockoutTie? @relation(fields:[knockoutTieId], references:[id])
-  homePlayer User @relation("home", fields:[homePlayerId], references:[id])
-  awayPlayer User @relation("away", fields:[awayPlayerId], references:[id])
-  submittedBy User? @relation("submitted", fields:[submittedById], references:[id])
-  confirmedBy User? @relation("confirmed", fields:[confirmedById], references:[id])
-  evidences MatchEvidence[]
-  disputes MatchDispute[]
+  id             String          @id @default(cuid())
+  championshipId String          @map("championship_id")
+  roundId        String?         @map("round_id")
+  knockoutTieId  String?         @map("knockout_tie_id")
+  homePlayerId   String          @map("home_player_id")
+  awayPlayerId   String          @map("away_player_id")
+  homeScore      Int?            @map("home_score")
+  awayScore      Int?            @map("away_score")
+  homePenalties  Int?            @map("home_penalties")
+  awayPenalties  Int?            @map("away_penalties")
+  winnerId       String?         @map("winner_id")
+  status         MatchStatus     @default(PENDING)
+  playedAt       DateTime?       @map("played_at")
+  submittedById  String?         @map("submitted_by")
+  confirmedById  String?         @map("confirmed_by")
+  submittedAt    DateTime?       @map("submitted_at")
+  confirmedAt    DateTime?       @map("confirmed_at")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  championship   Championship    @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  round          Round?          @relation(fields: [roundId], references: [id])
+  tie            KnockoutTie?    @relation(fields: [knockoutTieId], references: [id])
+  homePlayer     User            @relation("home", fields: [homePlayerId], references: [id])
+  awayPlayer     User            @relation("away", fields: [awayPlayerId], references: [id])
+  submittedBy    User?           @relation("submitted", fields: [submittedById], references: [id])
+  confirmedBy    User?           @relation("confirmed", fields: [confirmedById], references: [id])
+  evidences      MatchEvidence[]
+  disputes       MatchDispute[]
+
   @@map("matches")
 }
 
 model MatchEvidence {
-  id String @id @default(cuid())
-  matchId String @map("match_id")
-  userId String @map("user_id")
-  imageUrl String @map("image_url")
+  id        String   @id @default(cuid())
+  matchId   String   @map("match_id")
+  userId    String   @map("user_id")
+  imageUrl  String   @map("image_url")
   createdAt DateTime @default(now()) @map("created_at")
-  match Match @relation(fields:[matchId],references:[id],onDelete:Cascade)
-  user User @relation(fields:[userId],references:[id])
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
   @@map("match_evidences")
 }
+
 model MatchDispute {
-  id String @id @default(cuid())
-  matchId String @map("match_id")
-  openedBy String @map("opened_by")
-  reason String
-  status DisputeStatus @default(OPEN)
-  resolvedBy String? @map("resolved_by")
+  id         String        @id @default(cuid())
+  matchId    String        @map("match_id")
+  openedBy   String        @map("opened_by")
+  reason     String
+  status     DisputeStatus @default(OPEN)
+  resolvedBy String?       @map("resolved_by")
   resolution String?
-  createdAt DateTime @default(now()) @map("created_at")
-  resolvedAt DateTime? @map("resolved_at")
-  match Match @relation(fields:[matchId],references:[id],onDelete:Cascade)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  resolvedAt DateTime?     @map("resolved_at")
+  match      Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
   @@map("match_disputes")
 }
+
 model AuditLog {
-  id String @id @default(cuid())
-  userId String @map("user_id")
-  action String
-  entity String
-  entityId String @map("entity_id")
-  oldData Json? @map("old_data")
-  newData Json? @map("new_data")
-  reason String?
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  action    String
+  entity    String
+  entityId  String   @map("entity_id")
+  oldData   Json?    @map("old_data")
+  newData   Json?    @map("new_data")
+  reason    String?
   createdAt DateTime @default(now()) @map("created_at")
-  user User @relation(fields:[userId],references:[id])
+  user      User     @relation(fields: [userId], references: [id])
+
   @@map("audit_logs")
 }
+
 model Notification {
-  id String @id @default(cuid())
-  userId String @map("user_id")
-  message String
-  readAt DateTime? @map("read_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  message   String
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("notifications")
 }

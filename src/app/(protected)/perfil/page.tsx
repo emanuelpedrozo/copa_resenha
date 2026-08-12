@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { changePassword, logout, updateProfile } from "@/app/actions";
 import { PageTitle, TeamCrest } from "@/components/ui";
-import { teams } from "@/lib/teams";
+import { prisma } from "@/lib/prisma";
 
 export default async function Profile({
   searchParams,
@@ -9,6 +9,9 @@ export default async function Profile({
   searchParams: { ok?: string };
 }) {
   const user = await requireUser();
+  const availableTeams = await prisma.team.findMany({
+    orderBy: { name: "asc" },
+  });
   return (
     <>
       <PageTitle title="Meu perfil" subtitle={`@${user.username}`} />
@@ -43,9 +46,9 @@ export default async function Profile({
               <option value="" disabled>
                 Selecione seu time
               </option>
-              {teams.map(([name]) => (
-                <option key={name} value={name}>
-                  {name}
+              {availableTeams.map((team) => (
+                <option key={team.id} value={team.name}>
+                  {team.name}
                 </option>
               ))}
             </select>
