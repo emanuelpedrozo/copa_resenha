@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createTeam } from "@/app/actions";
+import { createTeam, updateTeam } from "@/app/actions";
 import { PageTitle, TeamCrest } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -27,7 +27,9 @@ export default async function TeamsAdmin({
       />
       {searchParams.ok && (
         <p className="mb-4 rounded-xl bg-pitch/10 p-3 text-sm text-pitch">
-          Time cadastrado com sucesso.
+          {searchParams.ok === "editado"
+            ? "Time atualizado com sucesso."
+            : "Time cadastrado com sucesso."}
         </p>
       )}
       {searchParams.error && (
@@ -36,7 +38,9 @@ export default async function TeamsAdmin({
             ? "Já existe um time com esse nome."
             : searchParams.error === "arquivo"
               ? "Selecione o arquivo do escudo."
-              : "Formato não reconhecido. Envie JPG, PNG, WEBP, GIF ou ICO."}
+              : searchParams.error === "inexistente"
+                ? "O time não foi encontrado."
+                : "Formato não reconhecido. Envie JPG, PNG, WEBP, GIF ou ICO."}
         </p>
       )}
       <form
@@ -73,12 +77,40 @@ export default async function TeamsAdmin({
           CADASTRAR TIME
         </button>
       </form>
-      <section className="card divide-y divide-white/[.06]">
+      <section className="space-y-4">
         {teams.map((team) => (
-          <div key={team.id} className="flex items-center gap-4 p-4">
+          <form
+            key={team.id}
+            action={updateTeam}
+            encType="multipart/form-data"
+            className="card grid items-end gap-4 p-4 sm:grid-cols-[auto_1fr_1fr_auto]"
+          >
+            <input type="hidden" name="id" value={team.id} />
             <TeamCrest url={team.crestUrl} team={team.name} />
-            <b>{team.name}</b>
-          </div>
+            <label className="text-xs font-bold text-muted">
+              NOME DO TIME
+              <input
+                name="name"
+                defaultValue={team.name}
+                required
+                minLength={2}
+                maxLength={80}
+                className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-white"
+              />
+            </label>
+            <label className="text-xs font-bold text-muted">
+              NOVO ESCUDO (OPCIONAL)
+              <input
+                name="crest"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/x-icon,.ico"
+                className="mt-2 block w-full rounded-xl border border-white/10 bg-black/20 p-2 text-xs file:mr-2 file:rounded-lg file:border-0 file:bg-pitch file:px-3 file:py-2 file:font-black file:text-ink"
+              />
+            </label>
+            <button className="rounded-xl border border-pitch/40 px-4 py-3 text-xs font-black text-pitch">
+              SALVAR
+            </button>
+          </form>
         ))}
       </section>
     </>

@@ -317,6 +317,46 @@ export async function createTeam(form: FormData) {
   redirect("/admin/times?ok=criado");
 }
 
+export async function updateTeam(form: FormData) {
+  const admin = await currentUser();
+  if (!admin || admin.role !== "ADMIN") throw new Error("Acesso negado.");
+  const data = z
+    .object({ id: z.string().min(1), name: z.string().trim().min(2).max(80) })
+    .parse(Object.fromEntries(form));
+  const current = await prisma.team.findUnique({ where: { id: data.id } });
+  if (!current) redirect("/admin/times?error=inexistente");
+  const duplicate = await prisma.team.findFirst({
+    where: { name: data.name, id: { not: data.id } },
+  });
+  if (duplicate) redirect("/admin/times?error=duplicado");
+  const crest = form.get("crest");
+  let crestUrl = current.crestUrl;
+  if (crest instanceof File && crest.size > 0) {
+    try {
+      crestUrl = `/api/team-crests/${await saveTeamCrest(crest)}`;
+    } catch {
+      redirect("/admin/times?error=formato");
+    }
+  }
+  await prisma.$transaction([
+    prisma.team.update({
+      where: { id: data.id },
+      data: { name: data.name, crestUrl },
+    }),
+    prisma.user.updateMany({
+      where: { teamName: current.name },
+      data: { teamName: data.name, teamCrestUrl: crestUrl },
+    }),
+  ]);
+  revalidatePath("/admin/times");
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/perfil");
+  revalidatePath("/dashboard");
+  revalidatePath("/jogos");
+  revalidatePath("/jogadores");
+  redirect("/admin/times?ok=editado");
+}
+
 export async function createChampionship(form: FormData) {
   const admin = await currentUser();
   if (!admin || admin.role !== "ADMIN") throw new Error("Acesso negado.");
