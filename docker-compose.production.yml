@@ -3,6 +3,7 @@ name: copa-resenha
 x-app-environment: &app-environment
   DATABASE_URL: postgresql://copa:${POSTGRES_PASSWORD}@postgres:5432/copa_resenha?schema=public
   AUTH_SECRET: ${AUTH_SECRET}
+  AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
   UPLOAD_DIR: /app/uploads
   MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
 

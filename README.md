@@ -81,6 +81,7 @@ Variáveis opcionais do ambiente:
 
 - `APP_PORT`: porta local do servidor, padrão `3011`;
 - `APP_BIND_ADDRESS`: endereço de bind, padrão `127.0.0.1` para uso atrás de Nginx/Caddy.
+- `AUTH_COOKIE_SECURE`: use `false` enquanto acessar diretamente por HTTP; altere para `true` ao publicar com HTTPS.
 
 O projeto fica em `$HOME/apps/copa_resenha`. A rede, os containers e os volumes possuem nomes exclusivos. Se `APP_PORT` estiver sendo usada por outro container, o workflow cancela o deploy antes de substituir qualquer serviço. Para acesso direto por IP, defina `APP_BIND_ADDRESS=0.0.0.0` e libere somente `APP_PORT` no firewall. O recomendado é manter `127.0.0.1` e publicar por HTTPS em um proxy reverso.
 
