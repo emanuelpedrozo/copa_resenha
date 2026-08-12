@@ -298,11 +298,16 @@ export async function createTeam(form: FormData) {
   if (!admin || admin.role !== "ADMIN") throw new Error("Acesso negado.");
   const name = z.string().trim().min(2).max(80).parse(form.get("name"));
   if (await prisma.team.findUnique({ where: { name } }))
-    throw new Error("Já existe um time com esse nome.");
+    redirect("/admin/times?error=duplicado");
   const crest = form.get("crest");
   if (!(crest instanceof File) || crest.size === 0)
-    throw new Error("O arquivo do escudo é obrigatório.");
-  const fileName = await saveTeamCrest(crest);
+    redirect("/admin/times?error=arquivo");
+  let fileName: string;
+  try {
+    fileName = await saveTeamCrest(crest);
+  } catch {
+    redirect("/admin/times?error=formato");
+  }
   await prisma.team.create({
     data: { name, crestUrl: `/api/team-crests/${fileName}` },
   });

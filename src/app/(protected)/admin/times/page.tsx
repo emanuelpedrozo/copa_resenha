@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export default async function TeamsAdmin({
   searchParams,
 }: {
-  searchParams: { ok?: string };
+  searchParams: { ok?: string; error?: string };
 }) {
   await requireAdmin();
   const teams = await prisma.team.findMany({ orderBy: { name: "asc" } });
@@ -28,6 +28,15 @@ export default async function TeamsAdmin({
       {searchParams.ok && (
         <p className="mb-4 rounded-xl bg-pitch/10 p-3 text-sm text-pitch">
           Time cadastrado com sucesso.
+        </p>
+      )}
+      {searchParams.error && (
+        <p className="mb-4 rounded-xl bg-rose-500/10 p-3 text-sm text-rose-300">
+          {searchParams.error === "duplicado"
+            ? "Já existe um time com esse nome."
+            : searchParams.error === "arquivo"
+              ? "Selecione o arquivo do escudo."
+              : "Formato não reconhecido. Envie JPG, PNG, WEBP, GIF ou ICO."}
         </p>
       )}
       <form
@@ -51,14 +60,14 @@ export default async function TeamsAdmin({
           <input
             name="crest"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/x-icon,.ico"
             required
             className="mt-2 block w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-pitch file:px-3 file:py-2 file:font-black file:text-ink"
           />
         </label>
         <p className="text-xs text-muted sm:col-span-2">
           Use uma imagem quadrada, de preferência PNG com fundo transparente.
-          Limite de 10 MB.
+          Aceita JPG, PNG, WEBP, GIF e ICO, até 10 MB.
         </p>
         <button className="rounded-xl bg-pitch px-5 py-3 font-black text-ink sm:col-span-2 sm:justify-self-start">
           CADASTRAR TIME
