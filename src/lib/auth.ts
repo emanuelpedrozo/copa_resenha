@@ -13,7 +13,7 @@ export async function currentUser(){
   if(!token) return null;
   const session=await readSession(token);
   if(!session?.id || typeof session.id!=='string') return null;
-  return prisma.user.findUnique({where:{id:session.id},select:{id:true,name:true,nickname:true,username:true,email:true,avatarUrl:true,role:true}});
+  return prisma.user.findUnique({where:{id:session.id},select:{id:true,name:true,nickname:true,username:true,email:true,avatarUrl:true,teamName:true,teamCrestUrl:true,role:true}});
 }
 export async function requireUser(){const user=await currentUser();if(!user)redirect('/login');return user}
 export async function requireAdmin(){const user=await requireUser();if(user.role!=='ADMIN')redirect('/dashboard');return user}

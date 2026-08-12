@@ -66,6 +66,8 @@ model User {
   email String @unique
   passwordHash String @map("password_hash")
   avatarUrl String? @map("avatar_url")
+  teamName String? @map("team_name")
+  teamCrestUrl String? @map("team_crest_url")
   role Role @default(PARTICIPANT)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
