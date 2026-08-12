@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { confirmResult, disputeResult, submitResult } from "@/app/actions";
-import { PageTitle } from "@/components/ui";
+import { PageTitle, TeamCrest } from "@/components/ui";
 import { statusLabel } from "@/lib/data";
 export default async function MatchDetails({
   params,
@@ -44,7 +44,11 @@ export default async function MatchDetails({
       )}
       <section className="card mb-5 p-6">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center text-center">
-          <Player name={m.homePlayer.nickname} />
+          <Player
+            name={m.homePlayer.nickname}
+            team={m.homePlayer.teamName}
+            crest={m.homePlayer.teamCrestUrl}
+          />
           <div>
             {m.homeScore === null ? (
               <b className="text-2xl text-pitch">VS</b>
@@ -57,7 +61,11 @@ export default async function MatchDetails({
               {statusLabel[m.status]}
             </span>
           </div>
-          <Player name={m.awayPlayer.nickname} />
+          <Player
+            name={m.awayPlayer.nickname}
+            team={m.awayPlayer.teamName}
+            crest={m.awayPlayer.teamCrestUrl}
+          />
         </div>
         {m.submittedBy && (
           <div className="mt-6 border-t border-white/10 pt-4 text-xs text-muted">
@@ -164,13 +172,20 @@ export default async function MatchDetails({
     </>
   );
 }
-function Player({ name }: { name: string }) {
+function Player({
+  name,
+  team,
+  crest,
+}: {
+  name: string;
+  team: string | null;
+  crest: string | null;
+}) {
   return (
-    <div>
-      <div className="mx-auto mb-2 grid h-16 w-16 place-items-center rounded-full border-2 border-white/10 bg-white/5 font-black">
-        {name.slice(0, 2).toUpperCase()}
-      </div>
-      <b>{name}</b>
+    <div className="flex flex-col items-center">
+      <TeamCrest url={crest} team={team} size="lg" />
+      <b className="mt-2">{name}</b>
+      {team && <span className="mt-1 text-[10px] text-muted">{team}</span>}
     </div>
   );
 }
