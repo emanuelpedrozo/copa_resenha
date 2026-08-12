@@ -66,6 +66,24 @@ Consulte `.env.example`. Em produção, gere `AUTH_SECRET` com pelo menos 32 byt
 - O seed cria um administrador apenas para desenvolvimento. Em produção, crie-o por rotina segura e remova/troque a senha inicial imediatamente.
 - Não monte `.env` na imagem nem registre tokens, senhas ou conteúdo dos comprovantes em logs.
 
+## Deploy automático no servidor
+
+O workflow `.github/workflows/deploy.yml` publica a aplicação em uma stack Docker isolada no servidor `46.225.12.24` após cada push na `main`. Ele não expõe o PostgreSQL e não executa comandos globais como `docker system prune` ou `docker compose down`.
+
+Cadastre no ambiente `production` do GitHub os secrets:
+
+- `SERVER_USER`: usuário SSH que pertence ao grupo Docker;
+- `SSH_PRIVATE_KEY`: chave privada correspondente a uma chave autorizada no servidor;
+- `POSTGRES_PASSWORD`: senha longa e URL-safe exclusiva para este banco;
+- `AUTH_SECRET`: segredo aleatório com pelo menos 32 bytes.
+
+Variáveis opcionais do ambiente:
+
+- `APP_PORT`: porta local do servidor, padrão `3011`;
+- `APP_BIND_ADDRESS`: endereço de bind, padrão `127.0.0.1` para uso atrás de Nginx/Caddy.
+
+O projeto fica em `$HOME/apps/copa_resenha`. A rede, os containers e os volumes possuem nomes exclusivos. Se `APP_PORT` estiver sendo usada por outro container, o workflow cancela o deploy antes de substituir qualquer serviço. Para acesso direto por IP, defina `APP_BIND_ADDRESS=0.0.0.0` e libere somente `APP_PORT` no firewall. O recomendado é manter `127.0.0.1` e publicar por HTTPS em um proxy reverso.
+
 ## Estado do MVP
 
 Esta entrega estabelece a fundação executável, o dashboard responsivo, autenticação, modelo completo de persistência, seed e regras centrais testadas. O restante dos fluxos de edição (wizard administrativo, telas de envio/confirmação e chave interativa) deve consumir esses serviços em incrementos seguintes.

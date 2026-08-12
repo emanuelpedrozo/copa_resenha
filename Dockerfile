@@ -1,13 +1,18 @@
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS base
+RUN apk add --no-cache openssl
+
+FROM base AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-FROM node:20-alpine AS builder
+
+FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate && npm run build
-FROM node:20-alpine AS runner
+
+FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/public ./public

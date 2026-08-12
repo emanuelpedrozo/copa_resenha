@@ -1,0 +1,70 @@
+name: copa-resenha
+
+x-app-environment: &app-environment
+  DATABASE_URL: postgresql://copa:${POSTGRES_PASSWORD}@postgres:5432/copa_resenha?schema=public
+  AUTH_SECRET: ${AUTH_SECRET}
+  UPLOAD_DIR: /app/uploads
+  MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: copa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: copa_resenha
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U copa -d copa_resenha"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      target: builder
+    command: npx prisma db push
+    environment: *app-environment
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
+
+  app:
+    build:
+      context: .
+      target: runner
+    environment: *app-environment
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3011}:3000"
+    volumes:
+      - uploads:/app/uploads
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+    restart: unless-stopped
+
+networks:
+  backend:
+    name: copa-resenha-backend
+
+volumes:
+  postgres_data:
+    name: copa-resenha-postgres-data
+  uploads:
+    name: copa-resenha-uploads
