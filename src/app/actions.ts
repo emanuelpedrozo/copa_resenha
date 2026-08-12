@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth";
 import { knockoutPairs, roundRobin } from "@/lib/tournament";
 import { saveEvidence } from "@/lib/uploads";
+import { teamCrestUrl, teams } from "@/lib/teams";
 
 export async function logout() {
   cookies().set("copa_session", "", { httpOnly: true, path: "/", maxAge: 0 });
@@ -155,9 +156,21 @@ export async function disputeResult(form: FormData) {
 export async function updateProfile(form: FormData) {
   const user = await currentUser();
   if (!user) redirect("/login");
-  const nickname = z.string().trim().min(2).max(30).parse(form.get("nickname"));
-  await prisma.user.update({ where: { id: user.id }, data: { nickname } });
+  const data = z
+    .object({
+      name: z.string().trim().min(2).max(100),
+      nickname: z.string().trim().min(2).max(30),
+      teamName: z.enum(teams.map(([name]) => name) as [string, ...string[]]),
+    })
+    .parse(Object.fromEntries(form));
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { ...data, teamCrestUrl: teamCrestUrl(data.teamName) },
+  });
   revalidatePath("/perfil");
+  revalidatePath("/dashboard");
+  revalidatePath("/jogos");
+  revalidatePath("/jogadores");
   redirect("/perfil?ok=perfil");
 }
 export async function changePassword(form: FormData) {
@@ -263,17 +276,14 @@ export async function createUser(form: FormData) {
         .regex(/^[a-z0-9._-]+$/),
       email: z.string().email().toLowerCase(),
       password: z.string().min(8),
-      teamName: z.string().trim().optional(),
-      teamDomain: z.string().trim().optional(),
+      teamName: z.enum(teams.map(([name]) => name) as [string, ...string[]]),
     })
     .parse(Object.fromEntries(form));
-  const { password, teamDomain, ...profile } = data;
+  const { password, ...profile } = data;
   await prisma.user.create({
     data: {
       ...profile,
-      teamCrestUrl: teamDomain
-        ? `https://www.google.com/s2/favicons?domain=${teamDomain}&sz=128`
-        : null,
+      teamCrestUrl: teamCrestUrl(data.teamName),
       passwordHash: await hashPassword(password),
     },
   });
