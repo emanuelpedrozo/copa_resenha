@@ -118,13 +118,12 @@ export default async function MatchDetails({
             <input
               name="evidence"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
-              capture="environment"
+              accept="image/*"
               required
               className="mt-2 block w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-pitch file:px-3 file:py-2 file:font-black file:text-ink"
             />
             <span className="mt-2 block text-xs font-normal text-muted">
-              JPG, PNG ou WEBP, até 10 MB.
+              Escolha pela câmera, galeria ou arquivos. Até 10 MB.
             </span>
           </label>
           <button className="mt-5 w-full rounded-xl bg-pitch py-3 font-black text-ink">
