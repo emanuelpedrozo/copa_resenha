@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "fs/promises";
 import path from "path";
 
 const types = [
@@ -73,6 +73,12 @@ export async function loadEvidence(name: string) {
   } catch {
     return null;
   }
+}
+export async function removeUpload(name: string) {
+  if (!/^(?:[a-z]+-)?[a-f0-9-]+\.(jpg|png|webp|gif|ico)$/.test(name)) return;
+  try {
+    await unlink(path.join(uploadDir, name));
+  } catch {}
 }
 export function evidenceMime(name: string) {
   return name.endsWith(".png")

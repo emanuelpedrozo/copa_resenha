@@ -11,7 +11,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { knockoutPairs, roundRobin } from "@/lib/tournament";
-import { saveEvidence, saveTeamCrest } from "@/lib/uploads";
+import { removeUpload, saveEvidence, saveTeamCrest } from "@/lib/uploads";
 
 export async function logout() {
   cookies().set("copa_session", "", { httpOnly: true, path: "/", maxAge: 0 });
@@ -261,6 +261,60 @@ export async function resolveDispute(form: FormData) {
   revalidatePath("/admin");
   revalidatePath("/classificacao");
   redirect("/admin?ok=resolvido");
+}
+
+export async function resetMatch(form: FormData) {
+  const admin = await currentUser();
+  if (!admin || admin.role !== "ADMIN") throw new Error("Acesso negado.");
+  const matchId = z.string().min(1).parse(form.get("matchId"));
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { evidences: true },
+  });
+  if (!match) throw new Error("Partida não encontrada.");
+  await prisma.$transaction(async (tx) => {
+    await tx.matchEvidence.deleteMany({ where: { matchId } });
+    await tx.matchDispute.deleteMany({ where: { matchId } });
+    await tx.match.update({
+      where: { id: matchId },
+      data: {
+        homeScore: null,
+        awayScore: null,
+        homePenalties: null,
+        awayPenalties: null,
+        winnerId: null,
+        status: "PENDING",
+        playedAt: null,
+        submittedById: null,
+        confirmedById: null,
+        submittedAt: null,
+        confirmedAt: null,
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        userId: admin.id,
+        action: "RESET_MATCH",
+        entity: "Match",
+        entityId: matchId,
+        oldData: {
+          homeScore: match.homeScore,
+          awayScore: match.awayScore,
+          status: match.status,
+        },
+        newData: { status: "PENDING" },
+        reason: "Resultado e contestação removidos pelo administrador",
+      },
+    });
+  });
+  await Promise.all(
+    match.evidences.map((evidence) => removeUpload(evidence.imageUrl)),
+  );
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+  revalidatePath("/jogos");
+  revalidatePath("/classificacao");
+  redirect("/admin?ok=resetado");
 }
 
 export async function createUser(form: FormData) {
